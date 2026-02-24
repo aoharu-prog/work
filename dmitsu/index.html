@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>見積もりテキスト生成 v18</title>
+    <title>見積もりテキスト生成 v17</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -45,6 +45,17 @@
             color: var(--ac);
         }
 
+        /* 本数と分数を横並びにする設定 */
+        .input-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 1.5rem;
+        }
+        .input-row .input-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
         .input-group { margin-bottom: 1.5rem; }
 
         label {
@@ -55,13 +66,11 @@
             color: var(--tx2);
         }
 
-        /* 納期入力エリア */
         .date-input-container {
             position: relative;
             width: 100%;
         }
 
-        /* 曜日付きで見せるためのダミー兼用の本物 */
         #valE {
             width: 100%;
             padding: 14px 14px 14px 45px;
@@ -74,17 +83,19 @@
             background: #fff;
             cursor: pointer;
             outline: none;
-            /* 表示をカスタマイズするため一部リセット */
-            position: relative;
+            -webkit-appearance: none;
+            transition: border-color 0.2s;
         }
+        #valE:focus { border-color: var(--ac2); }
 
-        /* 標準アイコンを左寄せ */
         #valE::-webkit-calendar-picker-indicator {
             position: absolute;
             left: 12px;
             width: 24px;
             height: 24px;
             cursor: pointer;
+            padding: 0;
+            margin: 0;
             z-index: 10;
         }
 
@@ -97,7 +108,9 @@
             box-sizing: border-box;
             outline: none;
             color: var(--tx);
+            transition: border-color 0.2s;
         }
+        .num-input:focus { border-color: var(--ac2); }
         .num-input::placeholder { color: var(--placeholder); }
 
         /* 曜日ボタン */
@@ -109,6 +122,7 @@
             align-items: center;
         }
         .row-label { font-size: 0.7rem; color: var(--ac); font-weight: bold; text-align: center; }
+        
         .day-btn {
             padding: 10px 0;
             border: 2px solid var(--bg3);
@@ -117,9 +131,22 @@
             cursor: pointer;
             color: var(--tx2);
             font-weight: bold;
-            transition: 0.2s;
+            transition: all 0.2s ease; /* アニメーション追加 */
         }
-        .day-btn.active { background: var(--ac); color: white; border-color: var(--ac); }
+        
+        /* 曜日ボタンのホバー時 */
+        .day-btn:hover {
+            background: var(--bg2);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        }
+
+        .day-btn.active { 
+            background: var(--ac); 
+            color: white; 
+            border-color: var(--ac); 
+            transform: translateY(0);
+        }
 
         /* 出力エリア */
         .output-container {
@@ -135,6 +162,7 @@
         .output-text { white-space: pre-wrap; font-size: 0.95rem; line-height: 1.7; margin: 0; }
 
         .copy-wrapper { position: absolute; top: 12px; right: 12px; }
+        
         .copy-icon-btn {
             background: #fff;
             border: 1px solid var(--bg3);
@@ -145,8 +173,19 @@
             justify-content: center;
             align-items: center;
             cursor: pointer;
+            transition: all 0.2s ease;
         }
-        .copy-icon-btn svg { width: 20px; height: 20px; fill: var(--tx2); }
+        
+        /* コピーボタンのホバー時 */
+        .copy-icon-btn:hover {
+            background: var(--ac);
+            border-color: var(--ac);
+            transform: scale(1.1);
+        }
+        .copy-icon-btn:hover svg { fill: #fff; }
+
+        .copy-icon-btn svg { width: 20px; height: 20px; fill: var(--tx2); transition: fill 0.2s; }
+        
         .tooltip {
             position: absolute;
             bottom: 125%;
@@ -169,20 +208,22 @@
 <div class="container">
     <h1>📝 見積もりメーカー</h1>
 
-    <div class="input-group">
-        <label>本数 (本)</label>
-        <input type="number" id="valA" class="num-input" placeholder="例: 10">
-    </div>
+    <div class="input-row">
+        <div class="input-group">
+            <label>本数 (本)</label>
+            <input type="number" id="valA" class="num-input" placeholder="例: 10">
+        </div>
 
-    <div class="input-group">
-        <label>分数 (分)</label>
-        <input type="number" id="valB" class="num-input" placeholder="例: 30">
+        <div class="input-group">
+            <label>分数 (分)</label>
+            <input type="number" id="valB" class="num-input" placeholder="例: 30">
+        </div>
     </div>
 
     <div class="input-group">
         <label>納期</label>
         <div class="date-input-container">
-            <input type="text" id="valE" onfocus="(this.type='date')" onblur="showFormattedDate(this)">
+            <input type="date" id="valE">
         </div>
         
         <div class="day-btn-grid">
@@ -224,7 +265,6 @@
     const valE = document.getElementById('valE');
     const outputText = document.getElementById('outputText');
     const weekNames = ["日", "月", "火", "水", "木", "金", "土"];
-    let savedDate = new Date(); // 日付を保持
 
     function formatTime(totalMinutes) {
         if (!totalMinutes) return "0時間0分";
@@ -234,17 +274,11 @@
         return `${h}時間${m}分`;
     }
 
-    // 曜日付きの表示に切り替える関数
-    function showFormattedDate(input) {
-        if (input.value) {
-            savedDate = new Date(input.value);
-        }
-        input.type = 'text';
-        const y = savedDate.getFullYear();
-        const m = savedDate.getMonth() + 1;
-        const d = savedDate.getDate();
-        const w = weekNames[savedDate.getDay()];
-        input.value = `${y}/${m}/${d}(${w})`;
+    function setDateValue(date) {
+        const yyyy = date.getFullYear();
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const dd = String(date.getDate()).padStart(2, '0');
+        valE.value = `${yyyy}-${mm}-${dd}`;
         updateTemplate();
     }
 
@@ -256,12 +290,9 @@
         if (weeksAhead === 2) diff += 7;
         date.setDate(date.getDate() + diff);
         
-        savedDate = date;
         document.querySelectorAll('.day-btn').forEach(btn => btn.classList.remove('active'));
         if (event) event.target.classList.add('active');
-        
-        // テキスト形式でセット
-        showFormattedDate(valE);
+        setDateValue(date);
     }
 
     function updateTemplate() {
@@ -270,10 +301,14 @@
         const varC = formatTime(b * 5.7);
         const varD = formatTime(b * 6.2);
 
-        const m = savedDate.getMonth() + 1;
-        const d = savedDate.getDate();
-        const w = weekNames[savedDate.getDay()];
-        const dateShort = `${m}/${d}(${w})`;
+        let dateShort = "";
+        if (valE.value) {
+            const date = new Date(valE.value);
+            const m = date.getMonth() + 1;
+            const d = date.getDate();
+            const w = weekNames[date.getDay()];
+            dateShort = `${m}/${d}(${w})`;
+        }
 
         const template = `お疲れ様です！
 お声がけありがとうございます^^
@@ -296,21 +331,18 @@
         } catch (err) { alert('コピー失敗'); }
     }
 
-    // 入力欄クリック時にカレンダー起動
     valE.addEventListener('click', () => {
-        valE.type = 'date';
-        // yyyy-mm-dd形式に一時的に戻す
-        const y = savedDate.getFullYear();
-        const mm = String(savedDate.getMonth() + 1).padStart(2, '0');
-        const dd = String(savedDate.getDate()).padStart(2, '0');
-        valE.value = `${y}-${mm}-${dd}`;
         if(valE.showPicker) valE.showPicker();
+    });
+
+    valE.addEventListener('change', () => {
+        document.querySelectorAll('.day-btn').forEach(btn => btn.classList.remove('active'));
+        updateTemplate();
     });
 
     [valA, valB].forEach(el => el.addEventListener('input', updateTemplate));
     
-    // 初期化：今日の曜日付き表示
-    showFormattedDate(valE);
+    setDateValue(new Date());
 </script>
 
 </body>

@@ -267,10 +267,12 @@
     const weekNames = ["日", "月", "火", "水", "木", "金", "土"];
 
     function formatTime(totalMinutes) {
-        if (!totalMinutes) return "0時間0分";
+        if (!totalMinutes) return "0分";
         const flooredMins = Math.floor(totalMinutes / 10) * 10;
         const h = Math.floor(flooredMins / 60);
         const m = flooredMins % 60;
+        if (h === 0) return `${m}分`;
+        if (m === 0) return `${h}時間`;
         return `${h}時間${m}分`;
     }
 
@@ -316,7 +318,7 @@
 見積もりこちらでお願いいたします🙇‍♀️
 
 元動画尺：${a}本 合計約${b}分
-見積時間：${varC}〜${varD}程度
+見積時間：${varC === varD ? varC : `${varC}〜${varD}`}程度
 見込納期：${dateShort} 16:00`;
 
         outputText.textContent = template;

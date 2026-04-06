@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>見積もりテキスト生成 v2</title>
+    <title>見積もりテキスト生成 v17</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -41,8 +41,39 @@
         h1 {
             text-align: center;
             font-size: 1.4rem;
-            margin-bottom: 2rem;
+            margin-bottom: 1.25rem;
             color: var(--ac);
+        }
+
+        .mode-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 1.75rem;
+            padding: 4px;
+            background: var(--bg2);
+            border-radius: 14px;
+            border: 2px solid var(--bg3);
+        }
+        .mode-tab {
+            flex: 1;
+            padding: 12px 10px;
+            border: none;
+            border-radius: 10px;
+            background: transparent;
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--tx2);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .mode-tab:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.55);
+        }
+        .mode-tab.active {
+            background: #fff;
+            color: var(--ac);
+            box-shadow: 0 2px 8px rgba(56, 136, 168, 0.12);
         }
 
         /* 本数と分数を横並びにする設定 */
@@ -157,7 +188,19 @@
             background: var(--bg);
             border-radius: 18px;
             padding: 1.5rem;
+            padding-top: 1.15rem;
             border: 2px solid var(--bg3);
+        }
+        .output-mode-label {
+            display: inline-block;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--ac);
+            background: rgba(56, 136, 168, 0.14);
+            padding: 5px 11px;
+            border-radius: 8px;
+            margin-bottom: 0.85rem;
+            letter-spacing: 0.03em;
         }
         .output-text { white-space: pre-wrap; font-size: 0.95rem; line-height: 1.7; margin: 0; }
 
@@ -206,7 +249,12 @@
 <body>
 
 <div class="container">
-    <h1>📝 見積もりメーカー v2</h1>
+    <h1>📝 見積もりメーカー</h1>
+
+    <div class="mode-tabs" role="tablist" aria-label="見積もりタイプ">
+        <button type="button" class="mode-tab active" id="tabNormal" role="tab" aria-selected="true" onclick="setEstimateMode('normal')">通常盤</button>
+        <button type="button" class="mode-tab" id="tabRough" role="tab" aria-selected="false" onclick="setEstimateMode('rough')">ラフカット版</button>
+    </div>
 
     <div class="input-row">
         <div class="input-group">
@@ -254,6 +302,7 @@
             </button>
         </div>
         <div class="output-area">
+            <div class="output-mode-label" id="outputModeLabel" aria-live="polite">通常盤</div>
             <pre class="output-text" id="outputText"></pre>
         </div>
     </div>
@@ -265,6 +314,17 @@
     const valE = document.getElementById('valE');
     const outputText = document.getElementById('outputText');
     const weekNames = ["日", "月", "火", "水", "木", "金", "土"];
+
+    let estimateMode = 'normal';
+
+    function setEstimateMode(mode) {
+        estimateMode = mode;
+        document.getElementById('tabNormal').classList.toggle('active', mode === 'normal');
+        document.getElementById('tabRough').classList.toggle('active', mode === 'rough');
+        document.getElementById('tabNormal').setAttribute('aria-selected', mode === 'normal');
+        document.getElementById('tabRough').setAttribute('aria-selected', mode === 'rough');
+        updateTemplate();
+    }
 
     function formatTime(totalMinutes) {
         if (!totalMinutes) return "0分";
@@ -297,11 +357,20 @@
         setDateValue(date);
     }
 
+    function updateOutputModeLabel() {
+        const el = document.getElementById('outputModeLabel');
+        if (!el) return;
+        el.textContent = estimateMode === 'rough' ? 'ラフカット版' : '通常盤';
+    }
+
     function updateTemplate() {
+        updateOutputModeLabel();
         const a = valA.value || "0";
         const b = parseFloat(valB.value) || 0;
-        const varC = formatTime(b * 5.7);
-        const varD = formatTime(b * 6.2);
+        const multC = estimateMode === 'rough' ? 3.5 : 5.7;
+        const multD = estimateMode === 'rough' ? 4 : 6.2;
+        const varC = formatTime(b * multC);
+        const varD = formatTime(b * multD);
 
         let dateShort = "";
         if (valE.value) {
